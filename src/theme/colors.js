@@ -1,0 +1,18 @@
+export const colors = {
+  background: '#0A0A0A',
+  surface: '#1A1A1A',
+  surfaceElevated: '#2A2A2A',
+  border: '#333333',
+  borderSubtle: '#2A2A2A',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#AAAAAA',
+  textMuted: '#888888',
+  textDim: '#666666',
+  accent: '#FF0000',
+  accentMuted: '#FF4444',
+  error: '#FF6666',
+  errorBackground: '#3A1A1A',
+  overlay: 'rgba(0, 0, 0, 0.8)',
+  black: '#000000',
+  youtube: '#FF0000',
+};

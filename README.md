@@ -1,97 +1,98 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# VidFlow
 
-# Getting Started
+A React Native app for discovering YouTube videos, downloading from multiple platforms, and saving to your gallery — backed by a lightweight Express API (`vidflow-server`).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+- **Feed** — trending YouTube videos with search and pagination
+- **Player** — in-app YouTube playback
+- **Import** — paste a YouTube, TikTok, Instagram, or Facebook link to download
+- **Downloads** — progress tracking; videos save to Gallery → **VidFlow** album
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Documentation
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+| Doc | Description |
+|-----|-------------|
+| [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | YouTube feed, search, player, feed downloads, setup |
+| [docs/URL_DOWNLOAD.md](docs/URL_DOWNLOAD.md) | Import tab — download from pasted URLs |
 
-```sh
-# Using npm
+## Project structure
+
+```
+VidFlow/                          # React Native mobile app
+├── App.js                        # Root entry (re-exports src/app/App)
+├── index.js                      # App registry
+├── src/
+│   ├── app/                      # Application shell
+│   ├── components/               # UI components (common, video, download)
+│   ├── config/                   # Environment & route constants
+│   ├── hooks/                    # Custom React hooks
+│   ├── navigation/               # React Navigation (tabs + stack)
+│   ├── screens/                  # Feed, Import, Downloads, Player
+│   ├── services/                 # API client, YouTube, download
+│   ├── store/                    # Zustand state (feed, downloads)
+│   ├── theme/                    # Design tokens
+│   └── utils/                    # Helpers (permissions, URL validation, …)
+├── android/
+├── ios/
+└── docs/
+
+vidflow-server/                   # Backend API (sibling folder, separate repo)
+```
+
+## Path aliases
+
+| Alias | Maps to |
+|-------|---------|
+| `@app` | `src/app` |
+| `@components` | `src/components` |
+| `@config` | `src/config` |
+| `@hooks` | `src/hooks` |
+| `@navigation` | `src/navigation` |
+| `@screens` | `src/screens` |
+| `@services` | `src/services` |
+| `@store` | `src/store` |
+| `@theme` | `src/theme` |
+| `@utils` | `src/utils` |
+
+## Getting started
+
+### 1. Backend
+
+```bash
+cd ../vidflow-server
+cp .env.example .env   # add your YouTube API key
+npm install
+npm run restart
+```
+
+### 2. Mobile app
+
+Development uses `http://localhost:3000` in `src/config/env.js`.
+
+- **iOS Simulator** — works out of the box
+- **Android (emulator or device)** — `adb reverse tcp:3000 tcp:3000` (included in `npm run android`)
+- **Physical device on Wi‑Fi** — set `API_BASE_URL` to your Mac's LAN IP
+
+```bash
+cd VidFlow
+npm install
+cd ios && bundle exec pod install && cd ..
 npm start
-
-# OR using Yarn
-yarn start
+npm run ios    # or npm run android
 ```
 
-## Step 2: Build and run your app
+See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for full setup and troubleshooting.
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## API endpoints
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/youtube/trending` | Trending videos |
+| GET | `/api/youtube/search?q=` | Search videos |
+| GET | `/api/youtube/video/:id` | Single video details |
+| GET | `/api/youtube/download/:id/info` | YouTube download metadata |
+| GET | `/api/youtube/download/:id` | YouTube download stream |
+| POST | `/api/download/info` | URL download metadata |
+| GET | `/api/download/stream?url=` | URL download stream |
