@@ -96,3 +96,4 @@ See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for full setup and troubles
 | GET | `/api/youtube/download/:id` | YouTube download stream |
 | POST | `/api/download/info` | URL download metadata |
 | GET | `/api/download/stream?url=` | URL download stream |
+# VideoDownload
