@@ -12,11 +12,13 @@ import {
 import { colors, spacing, typography } from '@theme';
 import { formatNumber } from '@utils/format';
 import { getYouTubeWatchUrl } from '@utils/youtube';
+import { getVideoThumbnailUri } from '@utils/videoThumbnail';
 import YouTubePlayer from '@components/video/YouTubePlayer';
 
 const PlayerScreen = ({ route, navigation }) => {
   const { video } = route.params;
   const [playing, setPlaying] = useState(true);
+  const thumbnailUri = getVideoThumbnailUri(video);
 
   const handleShare = async () => {
     try {
@@ -40,6 +42,7 @@ const PlayerScreen = ({ route, navigation }) => {
         videoId={video.videoId}
         playing={playing}
         onPlayingChange={setPlaying}
+        thumbnailUri={thumbnailUri}
       />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>

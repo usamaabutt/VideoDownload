@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from '@theme';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, spacing, typography, shadows } from '@theme';
 import { formatMegabytes, formatSpeed } from '@utils/format';
 import { DOWNLOAD_STATUS } from '@config/routes';
 
@@ -11,7 +11,7 @@ const StatRow = ({ label, value, highlight }) => (
   </View>
 );
 
-const DownloadItem = ({ item }) => {
+const DownloadItem = ({ item, onEdit }) => {
   const { title, thumbnail, status, received, total, progress, speed, error } = item;
   const remaining = total > 0 ? Math.max(total - received, 0) : 0;
   const percent =
@@ -32,13 +32,13 @@ const DownloadItem = ({ item }) => {
   const speedLabel = formatSpeed(speed);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, shadows.card]}>
       <Image source={{ uri: thumbnail }} style={styles.thumb} />
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
-        <Text style={styles.status}>{statusLabel}</Text>
+        <Text style={styles.status}>{statusLabel}{item.qualityLabel ? ` · ${item.qualityLabel}` : ''}</Text>
 
         {status === DOWNLOAD_STATUS.DOWNLOADING && (
           <>
@@ -70,6 +70,15 @@ const DownloadItem = ({ item }) => {
               value={total > 0 ? formatMegabytes(total) : formatMegabytes(received)}
               highlight
             />
+            {(item.localPath || item.galleryUri) && onEdit ? (
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() => onEdit(item)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.editBtnText}>Edit in Studio</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         )}
 
@@ -122,7 +131,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.accent,
+    backgroundColor: colors.download,
     borderRadius: 3,
   },
   percent: {
@@ -157,6 +166,18 @@ const styles = StyleSheet.create({
   error: {
     color: colors.error,
     fontSize: 11,
+  },
+  editBtn: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  editBtnText: {
+    color: colors.textOnPrimary,
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

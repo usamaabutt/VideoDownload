@@ -51,19 +51,36 @@ export async function fetchUrlDownloadInfo(sourceUrl) {
   return data;
 }
 
-function getDownloadStreamUrl(video) {
+function getDownloadStreamUrl(video, qualityHeight) {
+  const heightQuery =
+    qualityHeight && qualityHeight > 0
+      ? `&height=${encodeURIComponent(qualityHeight)}`
+      : '';
+
   if (video.sourceUrl) {
-    return `${API_BASE_URL}/api/download/stream?url=${encodeURIComponent(video.sourceUrl)}`;
+    return `${API_BASE_URL}/api/download/stream?url=${encodeURIComponent(video.sourceUrl)}${heightQuery}`;
   }
-  return `${API_BASE_URL}/api/youtube/download/${video.videoId}`;
+
+  const heightSuffix =
+    qualityHeight && qualityHeight > 0
+      ? `?height=${encodeURIComponent(qualityHeight)}`
+      : '';
+
+  return `${API_BASE_URL}/api/youtube/download/${video.videoId}${heightSuffix}`;
+}
+
+function buildDownloadFilename(title, videoId, qualityHeight) {
+  const base = sanitizeFilename(title, videoId).replace(/\.mp4$/i, '');
+  const suffix = qualityHeight && qualityHeight > 0 ? `_${qualityHeight}p` : '';
+  return `${base}${suffix}.mp4`;
 }
 
 export async function downloadVideoToGallery(
   video,
-  { knownTotal = 0, onProgress, onSaving } = {},
+  { knownTotal = 0, qualityHeight = null, onProgress, onSaving } = {},
 ) {
-  const url = getDownloadStreamUrl(video);
-  const filename = sanitizeFilename(video.title, video.videoId);
+  const url = getDownloadStreamUrl(video, qualityHeight);
+  const filename = buildDownloadFilename(video.title, video.videoId, qualityHeight);
   const localPath = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/${filename}`;
   let effectiveTotal = knownTotal;
   let pollTimer = null;
@@ -134,15 +151,36 @@ export async function downloadVideoToGallery(
       finalSize,
     });
 
-    await CameraRoll.saveAsset(filePath, {
+    const savedAsset = await CameraRoll.saveAsset(filePath, {
       type: 'video',
       album: APP_GALLERY_ALBUM,
     });
 
+    const galleryUri = savedAsset?.node?.image?.uri || null;
+    const editsDir = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/vidflow-edits`;
+    await ReactNativeBlobUtil.fs.mkdir(editsDir).catch(() => {});
+    const editCopyPath = `${editsDir}/${filename}`;
+    await ReactNativeBlobUtil.fs.cp(filePath, editCopyPath);
+
+    const copyExists = await ReactNativeBlobUtil.fs.exists(editCopyPath);
+    if (!copyExists) {
+      logger.warn('Download', 'Edit copy missing after save', { editCopyPath });
+    }
+
     await ReactNativeBlobUtil.fs.unlink(filePath).catch(() => {});
 
-    logger.info('Download', 'Saved to gallery', { album: APP_GALLERY_ALBUM });
-    return { album: APP_GALLERY_ALBUM, filename, fileSize: finalSize };
+    logger.info('Download', 'Saved to gallery', {
+      album: APP_GALLERY_ALBUM,
+      editCopyPath,
+      galleryUri,
+    });
+    return {
+      album: APP_GALLERY_ALBUM,
+      filename,
+      fileSize: finalSize,
+      localPath: copyExists ? editCopyPath : null,
+      galleryUri,
+    };
   } catch (err) {
     stopPolling();
     throw err;
