@@ -10,6 +10,8 @@ export const API_TIMEOUT_MS = 10000;
 export const DEFAULT_PAGE_SIZE = 20;
 export const DEFAULT_REGION_CODE = 'US';
 export const SEARCH_MIN_CHARS = 3;
+/** Background refresh for My Feed — YouTube trending updates slowly; 30s is a practical poll interval. */
+export const FEED_AUTO_REFRESH_MS = 30_000;
 export const APP_GALLERY_ALBUM = 'VidFlow';
 export const DOWNLOAD_TIMEOUT_MS = 600000;
 export const DOWNLOAD_INFO_TIMEOUT_MS = 60000;

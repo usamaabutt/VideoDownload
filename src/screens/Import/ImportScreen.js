@@ -5,31 +5,31 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { ROUTES } from '@config/routes';
-import { colors, spacing } from '@theme';
-import ScreenHeader from '@components/common/ScreenHeader';
+import { colors, spacing, shadows } from '@theme';
+import VidmateHeader from '@components/common/VidmateHeader';
+import SafeHeader from '@components/common/SafeHeader';
+import PlatformGrid from '@components/home/PlatformGrid';
 import useDownloadStore from '@store/downloadStore';
-import {
-  isSupportedVideoUrl,
-  normalizeVideoUrlInput,
-  PLATFORM_LABELS,
-} from '@utils/videoUrl';
+import { isSupportedVideoUrl, normalizeVideoUrlInput } from '@utils/videoUrl';
 import { isActiveDownload } from '@utils/download';
-
-const SUPPORTED_PLATFORMS = ['youtube', 'tiktok', 'instagram', 'facebook'];
+import useQualityDownload from '@hooks/useQualityDownload';
 
 const ImportScreen = ({ navigation }) => {
+  const tabBarHeight = useBottomTabBarHeight();
   const [url, setUrl] = useState('');
-  const downloadFromUrl = useDownloadStore((s) => s.downloadFromUrl);
   const activeMap = useDownloadStore((s) => s.active);
   const [loading, setLoading] = useState(false);
+  const { pickerModal, startUrlQualityDownload } = useQualityDownload({
+    onStarted: () => navigation.navigate(ROUTES.DOWNLOADS),
+  });
 
   const trimmedUrl = normalizeVideoUrlInput(url);
   const isValid = isSupportedVideoUrl(trimmedUrl);
@@ -45,14 +45,11 @@ const ImportScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const started = await downloadFromUrl(trimmedUrl);
-      if (started) {
-        navigation.navigate(ROUTES.DOWNLOADS);
-      }
+      await startUrlQualityDownload(trimmedUrl);
     } finally {
       setLoading(false);
     }
-  }, [canDownload, downloadFromUrl, trimmedUrl, navigation]);
+  }, [canDownload, startUrlQualityDownload, trimmedUrl]);
 
   const handleClear = useCallback(() => setUrl(''), []);
 
@@ -62,82 +59,78 @@ const ImportScreen = ({ navigation }) => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      <ScreenHeader title="Import" />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.headerGradientEnd} />
+      <SafeHeader>
+        <VidmateHeader title="Paste Link" subtitle="Download from any supported site" />
+      </SafeHeader>
+      {pickerModal}
 
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + spacing.md }]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.heading}>Paste a video link</Text>
-          <Text style={styles.subtitle}>
-            Works with YouTube, TikTok, Instagram, and Facebook
-          </Text>
+          <PlatformGrid title="Download from" />
 
-          <View style={styles.inputBox}>
-            <TextInput
-              style={styles.input}
-              placeholder="https://..."
-              placeholderTextColor={colors.textDim}
-              value={url}
-              onChangeText={handlePaste}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              multiline
-              textAlignVertical="top"
-            />
-            {url.length > 0 && (
-              <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
-                <Text style={styles.clearText}>✕</Text>
-              </TouchableOpacity>
+          <View style={[styles.pasteCard, shadows.card]}>
+            <Text style={styles.pasteLabel}>Paste video URL here</Text>
+            <View style={styles.inputBox}>
+              <TextInput
+                style={styles.input}
+                placeholder="https://youtube.com/... or any supported link"
+                placeholderTextColor={colors.textDim}
+                value={url}
+                onChangeText={handlePaste}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                multiline
+                textAlignVertical="top"
+              />
+              {url.length > 0 && (
+                <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
+                  <Text style={styles.clearText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {trimmedUrl.length > 0 && !isValid && (
+              <Text style={styles.errorText}>
+                Unsupported link — use YouTube, TikTok, Instagram, or Facebook
+              </Text>
             )}
+
+            <TouchableOpacity
+              style={[styles.downloadBtn, !canDownload && styles.downloadBtnDisabled]}
+              onPress={handleDownload}
+              disabled={!canDownload}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.textOnPrimary} />
+              ) : (
+                <Text style={styles.downloadBtnText}>↓  Download Video</Text>
+              )}
+            </TouchableOpacity>
           </View>
-
-          {trimmedUrl.length > 0 && !isValid && (
-            <Text style={styles.errorText}>
-              Unsupported link — use a YouTube, TikTok, Instagram, or Facebook URL
-            </Text>
-          )}
-
-          <View style={styles.platformRow}>
-            {SUPPORTED_PLATFORMS.map((platform) => (
-              <View key={platform} style={styles.platformChip}>
-                <Text style={styles.platformText}>{PLATFORM_LABELS[platform]}</Text>
-              </View>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.downloadBtn, !canDownload && styles.downloadBtnDisabled]}
-            onPress={handleDownload}
-            disabled={!canDownload}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <Text style={styles.downloadBtnText}>Download</Text>
-            )}
-          </TouchableOpacity>
 
           {activeImport && (
-            <View style={styles.activeBox}>
+            <View style={[styles.activeBox, shadows.card]}>
               <Text style={styles.activeTitle}>Downloading…</Text>
               <Text style={styles.activeSubtitle} numberOfLines={2}>
                 {activeImport.title}
               </Text>
-              <Text style={styles.activeHint}>Check the Downloads tab for progress</Text>
+              <Text style={styles.activeHint}>Check Files tab for progress</Text>
             </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -149,37 +142,37 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: 80,
+  content: {},
+  pasteCard: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
-  heading: {
+  pasteLabel: {
     color: colors.textPrimary,
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    color: colors.textDim,
-    fontSize: 13,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   inputBox: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 12,
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
-    minHeight: 100,
+    minHeight: 96,
+    marginBottom: spacing.md,
   },
   input: {
     color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
-    minHeight: 72,
+    minHeight: 68,
     paddingRight: spacing.lg,
   },
   clearBtn: {
@@ -195,49 +188,32 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.error,
     fontSize: 12,
-    marginTop: spacing.sm,
-  },
-  platformRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  platformChip: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 20,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  platformText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
   downloadBtn: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.download,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 50,
   },
   downloadBtnDisabled: {
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: colors.border,
   },
   downloadBtnText: {
-    color: colors.textPrimary,
+    color: colors.textOnPrimary,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   activeBox: {
     marginTop: spacing.lg,
+    marginHorizontal: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: spacing.md,
-    borderWidth: 0.5,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   activeTitle: {
     color: colors.accent,

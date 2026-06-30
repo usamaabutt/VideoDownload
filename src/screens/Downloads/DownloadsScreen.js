@@ -1,22 +1,26 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { colors, spacing } from '@theme';
 import { APP_GALLERY_ALBUM } from '@config/env';
 import useDownloadStore from '@store/downloadStore';
 import { listActiveDownloads } from '@utils/download';
+import { openVideoEditor } from '@services/edit';
 import DownloadItem from '@components/download/DownloadItem';
 import ScreenHeader from '@components/common/ScreenHeader';
+import SafeHeader from '@components/common/SafeHeader';
 import EmptyState from '@components/common/EmptyState';
 
 const DownloadsScreen = () => {
+  const tabBarHeight = useBottomTabBarHeight();
   const activeMap = useDownloadStore((s) => s.active);
   const history = useDownloadStore((s) => s.history);
   const clearHistory = useDownloadStore((s) => s.clearHistory);
@@ -26,28 +30,37 @@ const DownloadsScreen = () => {
   const hasActive = active.length > 0;
   const hasHistory = history.length > 0;
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      <ScreenHeader title="Downloads" />
+  const handleEdit = useCallback(async (item) => {
+    try {
+      await openVideoEditor({
+        localPath: item.localPath,
+        galleryUri: item.galleryUri,
+      });
+    } catch (err) {
+      Alert.alert('Editor error', err.message || 'Could not open editor');
+    }
+  }, []);
 
-      <Text style={styles.subtitle}>
-        Videos save to Gallery → {APP_GALLERY_ALBUM}
-      </Text>
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.headerGradientEnd} />
+      <SafeHeader>
+        <ScreenHeader title="My Files" subtitle={`Saved to Gallery → ${APP_GALLERY_ALBUM}`} />
+      </SafeHeader>
 
       {!hasActive && !hasHistory ? (
         <EmptyState
           icon="⬇️"
           title="No downloads yet"
-          subtitle="Download from Feed or paste a link in the Import tab"
+          subtitle="Download from Home or Paste Link tab"
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
+        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + spacing.md }]}>
           {hasActive && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>In progress</Text>
               {active.map((item) => (
-                <DownloadItem key={item.videoId} item={item} />
+                <DownloadItem key={item.videoId} item={item} onEdit={handleEdit} />
               ))}
             </View>
           )}
@@ -61,13 +74,17 @@ const DownloadsScreen = () => {
                 </TouchableOpacity>
               </View>
               {history.map((item) => (
-                <DownloadItem key={`${item.videoId}-${item.completedAt}`} item={item} />
+                <DownloadItem
+                  key={`${item.videoId}-${item.completedAt}`}
+                  item={item}
+                  onEdit={handleEdit}
+                />
               ))}
             </View>
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -76,15 +93,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  subtitle: {
-    color: colors.textDim,
-    fontSize: 12,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
   list: {
     paddingTop: spacing.sm,
-    paddingBottom: 80,
   },
   section: {
     marginBottom: spacing.lg,
@@ -109,8 +119,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   clearBtn: {
-    color: colors.textDim,
+    color: colors.accent,
     fontSize: 13,
+    fontWeight: '600',
   },
 });
 

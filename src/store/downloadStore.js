@@ -18,9 +18,14 @@ const useDownloadStore = create((set, get) => ({
 
   clearHistory: () => set({ history: [] }),
 
-  downloadVideo: async (video) => {
-    const downloadId = video.id || video.videoId;
+  downloadVideo: async (video, { qualityHeight = null, knownTotal: presetTotal = 0 } = {}) => {
+    const baseId = video.id || video.videoId;
+    const downloadId =
+      qualityHeight && qualityHeight > 0 ? `${baseId}_${qualityHeight}p` : baseId;
     const { title } = video;
+    const qualityLabel =
+      qualityHeight && qualityHeight > 0 ? `${qualityHeight}p` : 'Best';
+
     if (get().active[downloadId]) return false;
 
     const hasPermission = await requestGalleryPermission();
@@ -38,9 +43,11 @@ const useDownloadStore = create((set, get) => ({
       channelTitle: video.channelTitle,
       platform: video.platform,
       sourceUrl: video.sourceUrl,
+      qualityHeight,
+      qualityLabel,
       status: DOWNLOAD_STATUS.DOWNLOADING,
       received: 0,
-      total: video.fileSize || 0,
+      total: presetTotal || video.fileSize || 0,
       progress: 0,
       speed: 0,
       startedAt: Date.now(),
@@ -50,7 +57,7 @@ const useDownloadStore = create((set, get) => ({
       active: { ...state.active, [downloadId]: entry },
     }));
 
-    let knownTotal = video.fileSize || 0;
+    let knownTotal = presetTotal || video.fileSize || 0;
     if (!knownTotal) {
       try {
         const info = video.sourceUrl
@@ -79,8 +86,9 @@ const useDownloadStore = create((set, get) => ({
     }
 
     try {
-      await downloadVideoToGallery(video, {
+      const result = await downloadVideoToGallery(video, {
         knownTotal,
+        qualityHeight,
         onProgress: ({ received, total, progress }) => {
           const speed = trackDownloadSpeed(downloadId, received);
           set((state) => ({
@@ -117,6 +125,8 @@ const useDownloadStore = create((set, get) => ({
         status: DOWNLOAD_STATUS.COMPLETED,
         progress: 1,
         speed: 0,
+        localPath: result.localPath,
+        galleryUri: result.galleryUri,
         completedAt: Date.now(),
       };
 
@@ -131,7 +141,7 @@ const useDownloadStore = create((set, get) => ({
 
       Alert.alert(
         'Download complete',
-        `"${title}" saved to Gallery → ${APP_GALLERY_ALBUM}`,
+        `"${title}" (${qualityLabel}) saved to Gallery → ${APP_GALLERY_ALBUM}`,
       );
       return true;
     } catch (err) {

@@ -69,6 +69,9 @@ yarn-error.log
 # IDE
 .vscode/
 
+# Local project notes / agent-generated docs (keep on disk, do not push)
+docs/
+
 # Yarn
 .yarn/*
 !.yarn/patches
